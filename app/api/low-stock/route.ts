@@ -45,8 +45,5 @@ function getMockLowStock() {
     }
 
     // Fallback just in case
-    return [
-        { id: 6, product_name: 'Industrial Curing Epoxy 5L', available_quantity: 4, low_stock_threshold: 10, categories: { category_name: 'Consumables' } },
-        { id: 2, product_name: 'Carbon Fiber Sheets (3k)', available_quantity: 8, low_stock_threshold: 15, categories: { category_name: 'Raw Materials' } }
-    ];
+    return [];
 }

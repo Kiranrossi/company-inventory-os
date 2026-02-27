@@ -66,8 +66,8 @@ export async function GET() {
       `)
             .order('id');
 
-        if (error || !products || products.length === 0) {
-            console.warn('Supabase query error or empty tables:', error?.message);
+        if (error || !products) {
+            console.warn('Supabase query error or missing products array:', error?.message);
             return NextResponse.json({ data: getMockData(), isMock: true });
         }
 
@@ -127,8 +127,29 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, data: [newItem], isMock: true });
         }
 
-        // For true DB, would need to resolve/insert Category first, then insert Product
-        return NextResponse.json({ error: 'Direct POST requires Category Resolution logic which is omitted in this scope without real DB.' }, { status: 500 });
+        // Ensure Category exists and get ID
+        const { data: catData, error: catError } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('category_name', payload.category_name)
+            .single();
+
+        if (catError || !catData) {
+            throw new Error('Category not found or database configuration error.');
+        }
+
+        const { data, error } = await supabase
+            .from('products')
+            .insert({
+                product_name: payload.product_name,
+                available_quantity: Number(payload.available_quantity),
+                low_stock_threshold: Number(payload.low_stock_threshold),
+                category_id: catData.id
+            })
+            .select();
+
+        if (error) throw error;
+        return NextResponse.json({ success: true, data });
     } catch (err: any) {
         return NextResponse.json({ error: 'Failed to create' }, { status: 500 });
     }

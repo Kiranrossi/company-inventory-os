@@ -148,7 +148,7 @@ export default function AdminPortal() {
 
                             {authError && (
                                 <div className="flex items-center gap-2 text-rose-400 text-sm justify-center animate-in slide-in-from-top-2">
-                                    <AlertCircle size={14} /> Incorrect credentials. Try 'admin'.
+                                    <AlertCircle size={14} /> Incorrect password.
                                 </div>
                             )}
 
