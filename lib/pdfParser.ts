@@ -18,48 +18,51 @@ export async function parsePDF(buffer: Buffer): Promise<ParsedMaterial[]> {
         const { data: products } = await supabase.from('products').select('product_name');
         const knownNames = products?.map(p => p.product_name) || [];
 
-        // Split text line by line to correctly process tabular visual formats
-        const lines = originalText.split('\n');
+        // Clean multiline wraps by replacing ALL newlines, tabs, and multispaces with a single space.
+        let normalizedText = originalText.replace(/[\r\n\t\s]+/g, ' ');
+
+        // Pre-clean common dimensions (e.g. 1220x2440)
+        normalizedText = normalizedText.replace(/\b\d{2,4}\s*[xX*]\s*\d{2,4}\b/g, ' ');
+
+        // Pre-clean catalog strings starting with letter and number (e.g. E31102, C10, P10)
+        normalizedText = normalizedText.replace(/\b[A-Za-z]+\d+[A-Za-z0-9-]*\b/g, ' ');
 
         if (knownNames.length > 0) {
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i];
+            for (const name of knownNames) {
+                const normalizedName = name.replace(/[\r\n\t\s]+/g, ' ');
 
-                for (const name of knownNames) {
-                    if (line.includes(name)) {
+                if (normalizedText.includes(normalizedName)) {
+                    // Split by the name. A row in this PDF repeats the name twice: (Material, Model No)
+                    const parts = normalizedText.split(normalizedName);
+                    let totalQty = 0;
 
-                        // We might have multiline rows in PDFs. Concatenate the next line just in case the numbers wrapped.
-                        if (i + 1 < lines.length) {
-                            line += ' ' + lines[i + 1];
+                    for (let i = 1; i < parts.length; i += 2) {
+                        const part1 = parts[i] || '';         // The chunk right after the 1st occurrence
+                        const part2 = parts[i + 1] || '';     // The chunk right after the 2nd occurrence (if exists)
+                        let matchedRowQty = false;
+
+                        // Check the inner part first (Edgeband lengths usually live here)
+                        const match1 = part1.match(/\b\d+(?:\.\d+)?\b/);
+                        if (match1) {
+                            totalQty += parseFloat(match1[0]);
+                            matchedRowQty = true;
                         }
 
-                        // 1. Remove the product name entirely so its internal numbers (e.g., 8mm) don't confuse us
-                        let cleanedLine = line.split(name).join(' ');
-
-                        // 2. Erase common dimensions (e.g., 1220x2440) 
-                        cleanedLine = cleanedLine.replace(/\d{3,4}\s*[xX*]\s*\d{3,4}/g, ' ');
-
-                        // 3. Erase alphanumeric catalog numbers (e.g., E31102) 
-                        cleanedLine = cleanedLine.replace(/\b[A-Za-z]+\d+[A-Za-z0-9]*\b/g, ' ');
-
-                        // 4. Find all remaining standalone numbers in the string
-                        const digitMatches = cleanedLine.match(/\b\d+(?:\.\d+)?\b/g);
-
-                        if (digitMatches && digitMatches.length > 0) {
-                            // Pick the LAST number remaining on the row, which maps to Quantity or Length
-                            const finalNumberStr = digitMatches[digitMatches.length - 1];
-                            const qty = parseFloat(finalNumberStr);
-
-                            const existing = materials.find(m => m.product_name === name);
-                            if (existing) {
-                                existing.quantity += qty;
-                            } else {
-                                materials.push({ product_name: name, quantity: qty });
+                        // If nothing was in the inner part (Panels have dimension removed, so it's empty),
+                        // check the outer part (Quantity usually lives here, e.g. "Generic 2")
+                        if (!matchedRowQty) {
+                            const match2 = part2.match(/\b\d+(?:\.\d+)?\b/);
+                            if (match2) {
+                                totalQty += parseFloat(match2[0]);
                             }
                         }
+                    }
 
-                        // Break name search since we found the material for this block
-                        break;
+                    if (totalQty > 0) {
+                        materials.push({
+                            product_name: name,
+                            quantity: totalQty
+                        });
                     }
                 }
             }
