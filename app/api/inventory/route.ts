@@ -149,10 +149,14 @@ export async function POST(request: Request) {
             })
             .select();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase Product Insert Error:', error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
         return NextResponse.json({ success: true, data });
     } catch (err: any) {
-        return NextResponse.json({ error: 'Failed to create' }, { status: 500 });
+        console.error('POST /api/inventory Server Error:', err);
+        return NextResponse.json({ error: err.message || 'Failed to create' }, { status: 500 });
     }
 }
 
