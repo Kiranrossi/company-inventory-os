@@ -139,9 +139,20 @@ export async function POST(request: Request) {
             throw new Error('Category not found or database configuration error.');
         }
 
+        // Fix sequence mismatch by fetching max id manually
+        const { data: maxProd } = await supabase
+            .from('products')
+            .select('id')
+            .order('id', { ascending: false })
+            .limit(1)
+            .single();
+
+        const nextId = (maxProd?.id || 0) + 1;
+
         const { data, error } = await supabase
             .from('products')
             .insert({
+                id: nextId,
                 product_name: payload.product_name,
                 available_quantity: Number(payload.available_quantity),
                 low_stock_threshold: Number(payload.low_stock_threshold),
