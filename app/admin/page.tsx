@@ -191,7 +191,7 @@ export default function AdminPortal() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* Left Col: Add New Item Form */}
-                <div className="lg:col-span-1 border border-neutral-800 bg-neutral-900 rounded-3xl p-6 h-fit sticky top-6">
+                <div className="lg:col-span-1 border border-neutral-800 bg-neutral-900 rounded-3xl p-6 h-fit lg:sticky lg:top-24">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg"><PackagePlus size={20} /></div>
                         <h3 className="text-lg font-bold text-white">Inject New Unit</h3>
