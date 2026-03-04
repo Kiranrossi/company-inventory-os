@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Warehouse OS',
+  title: 'Modulr Homes',
   description: 'Internal warehouse inventory management and forecasting',
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-950 text-neutral-100 flex h-screen overflow-hidden`}>
         <Sidebar />
-        <main className="flex-1 overflow-y-auto w-full p-8">
+        <main className="flex-1 overflow-y-auto w-full p-5 pt-24 md:p-8">
           {children}
         </main>
       </body>
