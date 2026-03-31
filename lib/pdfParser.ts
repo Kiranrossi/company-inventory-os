@@ -59,9 +59,14 @@ export async function parsePDF(buffer: Buffer): Promise<ParsedMaterial[]> {
                     }
 
                     if (totalQty > 0) {
+                        // Convert Edgeband lengths from mm to meters
+                        const finalQty = name.toLowerCase().includes('edgeband') 
+                            ? totalQty / 1000 
+                            : totalQty;
+
                         materials.push({
                             product_name: name,
-                            quantity: totalQty
+                            quantity: finalQty
                         });
                     }
                 }
@@ -74,9 +79,17 @@ export async function parsePDF(buffer: Buffer): Promise<ParsedMaterial[]> {
             lines.forEach((line: string) => {
                 const match = line.match(/(.+?)\s*-\s*(\d+(\.\d+)?)/);
                 if (match) {
+                    const parsedName = match[1].trim();
+                    let parsedQty = parseFloat(match[2]);
+
+                    // Convert Edgeband lengths from mm to meters
+                    if (parsedName.toLowerCase().includes('edgeband')) {
+                        parsedQty = parsedQty / 1000;
+                    }
+
                     materials.push({
-                        product_name: match[1].trim(),
-                        quantity: parseFloat(match[2])
+                        product_name: parsedName,
+                        quantity: parsedQty
                     });
                 }
             });

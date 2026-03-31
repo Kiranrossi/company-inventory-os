@@ -90,8 +90,12 @@ export default function ProjectLogTable({ refreshTrigger }: ProjectLogTableProps
                                                 key={i}
                                                 className="bg-black border border-neutral-800 text-neutral-300 rounded-full px-3 py-1 text-xs flex items-center shadow-inner"
                                             >
-                                                <span className="mr-2 text-blue-400 font-medium">{m.quantity_used}x</span>
-                                                {m.products?.product_name || 'Unknown'}
+                                                <span className="mr-2 text-blue-400 font-medium">
+                                                    {m.quantity_used}{m.products?.product_name?.toLowerCase().includes('edgeband') ? ' meters' : 'x'}
+                                                </span>
+                                                {m.products?.product_name?.toLowerCase().includes('edgeband')
+                                                    ? m.products?.product_name.replace(/mm/g, 'meters')
+                                                    : m.products?.product_name || 'Unknown'}
                                             </div>
                                         ))}
                                     </div>

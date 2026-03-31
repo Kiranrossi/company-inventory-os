@@ -33,10 +33,7 @@ if (!globalMockData) {
 
         // Hardware
         { id: 19, product_name: '8x40 Wooden Dowel', available_quantity: 2000, low_stock_threshold: 500, categories: { id: 4, category_name: 'Hardware' } },
-        { id: 20, product_name: 'Minifix _ External', available_quantity: 1500, low_stock_threshold: 300, categories: { id: 4, category_name: 'Hardware' } },
-        { id: 21, product_name: 'Minifix 40mm_Internal', available_quantity: 1200, low_stock_threshold: 300, categories: { id: 4, category_name: 'Hardware' } },
-        { id: 22, product_name: 'MH-Minifix _ External', available_quantity: 800, low_stock_threshold: 200, categories: { id: 4, category_name: 'Hardware' } },
-        { id: 23, product_name: 'MH_Minifix 40mm_Internal', available_quantity: 750, low_stock_threshold: 200, categories: { id: 4, category_name: 'Hardware' } },
+        { id: 20, product_name: 'Minifix', available_quantity: 4250, low_stock_threshold: 1000, categories: { id: 4, category_name: 'Hardware' } },
         { id: 24, product_name: 'Black Screw 3.5x19mm', available_quantity: 5000, low_stock_threshold: 1000, categories: { id: 4, category_name: 'Hardware' } },
         { id: 25, product_name: 'HETTICH SKIRTING LEG_100mm', available_quantity: 400, low_stock_threshold: 100, categories: { id: 4, category_name: 'Hardware' } },
         { id: 26, product_name: 'BZH(160)', available_quantity: 300, low_stock_threshold: 50, categories: { id: 4, category_name: 'Hardware' } },

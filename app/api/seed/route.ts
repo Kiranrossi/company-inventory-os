@@ -44,10 +44,7 @@ export async function GET() {
 
             // Hardware (id: 4)
             { id: 19, category_id: 4, product_name: '8x40 Wooden Dowel', available_quantity: 2000, low_stock_threshold: 500 },
-            { id: 20, category_id: 4, product_name: 'Minifix _ External', available_quantity: 1500, low_stock_threshold: 300 },
-            { id: 21, category_id: 4, product_name: 'Minifix 40mm_Internal', available_quantity: 1200, low_stock_threshold: 300 },
-            { id: 22, category_id: 4, product_name: 'MH-Minifix _ External', available_quantity: 800, low_stock_threshold: 200 },
-            { id: 23, category_id: 4, product_name: 'MH_Minifix 40mm_Internal', available_quantity: 750, low_stock_threshold: 200 },
+            { id: 20, category_id: 4, product_name: 'Minifix', available_quantity: 4250, low_stock_threshold: 1000 },
             { id: 24, category_id: 4, product_name: 'Black Screw 3.5x19mm', available_quantity: 5000, low_stock_threshold: 1000 },
             { id: 25, category_id: 4, product_name: 'HETTICH SKIRTING LEG_100mm', available_quantity: 400, low_stock_threshold: 100 },
             { id: 26, category_id: 4, product_name: 'BZH(160)', available_quantity: 300, low_stock_threshold: 50 },

@@ -151,7 +151,9 @@ export default function InventoryTable() {
                                                     <td className="px-6 py-4 text-neutral-500">{index + 1}</td>
                                                     <td className="px-6 py-4">
                                                         <span className={`font-medium ${isLow ? 'text-rose-400' : 'text-neutral-200'}`}>
-                                                            {product.product_name}
+                                                            {product.categories?.category_name === 'Edge-bands' 
+                                                                ? product.product_name.replace(/mm/g, 'meters')
+                                                                : product.product_name}
                                                         </span>
                                                         {isLow && (
                                                             <span className="ml-2 inline-block px-2 py-0.5 text-[10px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-full">
