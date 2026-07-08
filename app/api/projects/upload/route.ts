@@ -5,6 +5,7 @@ import { runPipeline } from '@/lib/pipelineRunner';
 import { promises as fs } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
 
 export async function POST(request: Request) {
     try {
@@ -24,8 +25,8 @@ export async function POST(request: Request) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Create a temp folder and write the file temporarily
-        const uploadsDir = path.join(process.cwd(), 'tmp', 'uploads');
+        // Create a temp folder in the system temp directory (required for Vercel Serverless)
+        const uploadsDir = path.join(os.tmpdir(), 'uploads');
         await fs.mkdir(uploadsDir, { recursive: true });
         
         const tempFilePath = path.join(uploadsDir, `${crypto.randomUUID()}${fileExtension}`);
