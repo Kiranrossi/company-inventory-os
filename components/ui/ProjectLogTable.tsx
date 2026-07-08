@@ -7,6 +7,7 @@ interface ProjectLog {
     project_name: string;
     upload_date: string;
     status: string;
+    confirmed_by?: string;
     project_materials: {
         quantity_used: number;
         products: { product_name: string };
@@ -73,6 +74,7 @@ export default function ProjectLogTable({ refreshTrigger }: ProjectLogTableProps
                             <th className="px-6 py-4 font-medium">Work Order UID</th>
                             <th className="px-6 py-4 font-medium">Consumed Resources / Qty</th>
                             <th className="px-6 py-4 font-medium">Date Indexed</th>
+                            <th className="px-6 py-4 font-medium">Confirmed By</th>
                             <th className="px-6 py-4 font-medium text-right">Verification</th>
                         </tr>
                     </thead>
@@ -104,6 +106,9 @@ export default function ProjectLogTable({ refreshTrigger }: ProjectLogTableProps
                                     {new Date(log.upload_date).toLocaleString(undefined, {
                                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                                     })}
+                                </td>
+                                <td className="px-6 py-4 text-neutral-200 font-medium">
+                                    {log.confirmed_by || 'Nisha'}
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]">

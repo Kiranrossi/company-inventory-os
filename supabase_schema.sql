@@ -20,7 +20,8 @@ CREATE TABLE projects (
   id SERIAL PRIMARY KEY,
   project_name TEXT NOT NULL UNIQUE,
   upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  status TEXT
+  status TEXT,
+  confirmed_by TEXT NOT NULL DEFAULT 'Nisha'
 );
 
 -- 4) Create Project Materials Table (for consumption log)

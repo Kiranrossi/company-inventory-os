@@ -160,6 +160,11 @@ export default function InventoryTable() {
                                                                 Low Stock
                                                             </span>
                                                         )}
+                                                        {product.categories?.category_name === 'Needs Review' && (
+                                                            <span className="ml-2 inline-block px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full">
+                                                                Needs Review
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         {isEditing ? (
