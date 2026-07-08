@@ -5,7 +5,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
+// @ts-ignore
 import pdfParse from 'pdf-parse';
+// @ts-ignore
 import mammoth from 'mammoth';
 import Anthropic from '@anthropic-ai/sdk';
 import stringSimilarity from 'string-similarity';
