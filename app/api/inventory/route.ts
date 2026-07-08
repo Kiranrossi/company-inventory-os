@@ -144,9 +144,19 @@ export async function POST(request: Request) {
 
         // Auto-create category if it doesn't exist
         if (!catData) {
+            // Fix sequence mismatch by fetching max category id manually
+            const { data: maxCat } = await adminSupabase
+                .from('categories')
+                .select('id')
+                .order('id', { ascending: false })
+                .limit(1)
+                .single();
+
+            const nextCatId = (maxCat?.id || 0) + 1;
+
             const { data: newCat, error: insertCatError } = await adminSupabase
                 .from('categories')
-                .insert({ category_name: payload.category_name })
+                .insert({ id: nextCatId, category_name: payload.category_name })
                 .select('id')
                 .single();
                 
