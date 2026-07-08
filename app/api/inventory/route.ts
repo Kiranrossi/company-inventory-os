@@ -105,11 +105,15 @@ export async function PATCH(request: Request) {
     }
 }
 
+import { createClient } from '@supabase/supabase-js';
+
 export async function POST(request: Request) {
     try {
         const payload = await request.json();
 
         const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+        
         if (dbUrl.includes('placeholder') || dbUrl.includes('your_supabase')) {
             const newItem = {
                 id: Date.now(),
@@ -125,19 +129,35 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, data: [newItem], isMock: true });
         }
 
-        // Ensure Category exists and get ID
-        const { data: catData, error: catError } = await supabase
+        if (!serviceKey) {
+            throw new Error('Server misconfiguration: Missing SUPABASE_SERVICE_ROLE_KEY.');
+        }
+
+        const adminSupabase = createClient(dbUrl, serviceKey);
+
+        // Check if Category exists
+        let { data: catData, error: catError } = await adminSupabase
             .from('categories')
             .select('id')
             .eq('category_name', payload.category_name)
-            .single();
+            .maybeSingle();
 
-        if (catError || !catData) {
-            throw new Error('Category not found or database configuration error.');
+        // Auto-create category if it doesn't exist
+        if (!catData) {
+            const { data: newCat, error: insertCatError } = await adminSupabase
+                .from('categories')
+                .insert({ category_name: payload.category_name })
+                .select('id')
+                .single();
+                
+            if (insertCatError || !newCat) {
+                throw new Error('Failed to auto-create category: ' + (insertCatError?.message || ''));
+            }
+            catData = newCat;
         }
 
         // Fix sequence mismatch by fetching max id manually
-        const { data: maxProd } = await supabase
+        const { data: maxProd } = await adminSupabase
             .from('products')
             .select('id')
             .order('id', { ascending: false })
@@ -146,7 +166,7 @@ export async function POST(request: Request) {
 
         const nextId = (maxProd?.id || 0) + 1;
 
-        const { data, error } = await supabase
+        const { data, error } = await adminSupabase
             .from('products')
             .insert({
                 id: nextId,
