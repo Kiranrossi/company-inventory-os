@@ -9,20 +9,25 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@supabase/supabase-js": "^2.97.0",
+    "fuzzysort": "^3.1.0",
     "lucide-react": "^0.575.0",
+    "mammoth": "^1.12.0",
     "next": "16.1.6",
-    "pdf-parse": "^1.1.1",
+    "pdf-parse": "^1.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-google-drive-picker": "^1.2.2",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "string-similarity": "^4.0.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/string-similarity": "^4.0.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

@@ -1,11 +1,14 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
-import { runPipeline } from '@/lib/pipelineRunner';
 import { promises as fs } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
+import Anthropic from '@anthropic-ai/sdk';
+import stringSimilarity from 'string-similarity';
 
 export async function POST(request: Request) {
     try {
@@ -24,13 +27,6 @@ export async function POST(request: Request) {
         // Convert Web File Object to Node Buffer
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-
-        // Create a temp folder in the system temp directory (required for Vercel Serverless)
-        const uploadsDir = path.join(os.tmpdir(), 'uploads');
-        await fs.mkdir(uploadsDir, { recursive: true });
-        
-        const tempFilePath = path.join(uploadsDir, `${crypto.randomUUID()}${fileExtension}`);
-        await fs.writeFile(tempFilePath, buffer);
 
         // Fetch current Master Inventory to feed to Python fuzzy matcher
         const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -51,31 +47,122 @@ export async function POST(request: Request) {
             }
         }
 
-        // Run the 3-stage python pipeline
-        let pipelineResult;
-        try {
-            pipelineResult = await runPipeline(tempFilePath, inventory, 75);
-        } finally {
-            // Clean up temporary file
-            try {
-                await fs.unlink(tempFilePath);
-            } catch (unlinkErr) {
-                console.warn(`Failed to delete temp upload file at ${tempFilePath}:`, unlinkErr);
-            }
+        // 1. EXTRACT RAW TEXT FROM FILE
+        let rawText = '';
+        if (fileExtension === '.pdf') {
+            const pdfData = await pdfParse(buffer);
+            rawText = pdfData.text;
+        } else {
+            const docxData = await mammoth.extractRawText({ buffer });
+            rawText = docxData.value;
         }
 
-        if (pipelineResult.matched_items.length === 0 && pipelineResult.unmatched_items.length === 0) {
+        // 2. EXTRACT TABLES VIA ANTHROPIC CLAUDE 3.5 SONNET
+        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const prompt = `You are an expert data extraction tool. Given the raw text extracted from a hardware/materials order document, your task is to identify and extract the list of materials requested.
+CRITICAL RULES:
+1. ONLY extract items from tables that clearly represent materials/hardwares to be consumed (e.g., "Hardwares", "Materials List").
+2. DO NOT extract items from summary tables, "List of Units", "Panels", or serial number lists. If a table does not have an explicit quantity, IGNORE IT.
+3. For each item, extract the descriptive name (e.g., "8x40 Wooden Dowel", "Black Screw 3.5x19mm"). Prioritize "SKU Name", "Item Name", or "Description". DO NOT extract pure model codes (e.g., "WD840", "SC3.519") unless it's the only description available.
+4. Clean the quantity to a pure number (e.g., "227 pcs" -> 227).
+
+Output pure JSON. DO NOT include markdown formatting or markdown code blocks (no \`\`\`json). Return a JSON array of objects with keys "raw_name" and "requested_qty". Return an empty array [] if no valid materials are found.
+
+Document Text:
+${rawText}`;
+
+        const response = await anthropic.messages.create({
+            model: 'claude-3-5-sonnet-20240620',
+            max_tokens: 4096,
+            temperature: 0,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        let extractedItems: {raw_name: string, requested_qty: number}[] = [];
+        try {
+            let jsonStr = (response.content[0] as any).text.trim();
+            if (jsonStr.startsWith('\`\`\`json')) jsonStr = jsonStr.substring(7);
+            if (jsonStr.startsWith('\`\`\`')) jsonStr = jsonStr.substring(3);
+            if (jsonStr.endsWith('\`\`\`')) jsonStr = jsonStr.substring(0, jsonStr.length - 3);
+            extractedItems = JSON.parse(jsonStr.trim());
+        } catch (err) {
+            console.error('Failed to parse Claude JSON:', (response.content[0] as any).text);
+            throw new Error('Failed to parse AI extraction results. Please try again.');
+        }
+
+        if (!Array.isArray(extractedItems) || extractedItems.length === 0) {
             return NextResponse.json({
                 error: 'No valid materials recognized in this document. Make sure it has a valid table containing items and quantities.'
             }, { status: 400 });
         }
 
+        // 3. FUZZY MATCH AGAINST MASTER INVENTORY
+        const threshold = 0.75; // 75%
+        const matched_items: any[] = [];
+        const unmatched_items: any[] = [];
+        const skipped_items: any[] = [];
+        
+        // Helper to normalize strings for comparison
+        const normalizeStr = (s: string) => {
+            return String(s).toLowerCase().replace(/[-_]/g, ' ').replace(/\\s+/g, ' ').trim();
+        };
+
+        const inventoryNames = inventory.map(i => normalizeStr(i.product_name));
+
+        for (const item of extractedItems) {
+            if (!item.raw_name || typeof item.requested_qty !== 'number' || isNaN(item.requested_qty)) {
+                skipped_items.push({ raw_name: item.raw_name || 'Unknown', raw_qty: String(item.requested_qty), reason: 'Invalid name or quantity' });
+                continue;
+            }
+
+            const query = normalizeStr(item.raw_name);
+            const matches = stringSimilarity.findBestMatch(query, inventoryNames);
+            const bestMatch = matches.bestMatch;
+
+            const confidence = bestMatch.rating; // 0.0 to 1.0
+            const bestMatchIndex = inventoryNames.indexOf(bestMatch.target);
+            const inventoryItem = inventory[bestMatchIndex];
+
+            if (confidence >= threshold) {
+                matched_items.push({
+                    product_name: inventoryItem.product_name,
+                    requested_qty: item.requested_qty,
+                    available_quantity: inventoryItem.available_quantity,
+                    low_stock_threshold: inventoryItem.low_stock_threshold,
+                    raw_names: [item.raw_name]
+                });
+            } else {
+                unmatched_items.push({
+                    raw_name: item.raw_name,
+                    requested_qty: item.requested_qty,
+                    confidence: Math.round(confidence * 100),
+                    best_fuzzy_match: inventoryItem.product_name
+                });
+            }
+        }
+
+        // Deduplicate matched items by product_name
+        const mergedMatched: any[] = [];
+        const matchedMap = new Map();
+        for (const m of matched_items) {
+            if (matchedMap.has(m.product_name)) {
+                const existing = matchedMap.get(m.product_name);
+                existing.requested_qty += m.requested_qty;
+                if (!existing.raw_names.includes(m.raw_names[0])) {
+                    existing.raw_names.push(m.raw_names[0]);
+                }
+            } else {
+                matchedMap.set(m.product_name, m);
+                mergedMatched.push(m);
+            }
+        }
+
         return NextResponse.json({
             success: true,
             data: {
-                matched_items: pipelineResult.matched_items,
-                unmatched_items: pipelineResult.unmatched_items,
-                skipped_items: pipelineResult.skipped_items
+                matched_items: mergedMatched,
+                unmatched_items: unmatched_items,
+                skipped_items: skipped_items
             },
             fileName: file.name
         });
