@@ -9,7 +9,7 @@ import os from 'os';
 import pdfParse from 'pdf-parse';
 // @ts-ignore
 import mammoth from 'mammoth';
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 import stringSimilarity from 'string-similarity';
 
 export async function POST(request: Request) {
@@ -59,8 +59,8 @@ export async function POST(request: Request) {
             rawText = docxData.value;
         }
 
-        // 2. EXTRACT TABLES VIA ANTHROPIC CLAUDE 3.5 SONNET
-        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        // 2. EXTRACT TABLES VIA GROQ LLAMA 3
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
         const prompt = `You are an expert data extraction tool. Given the raw text extracted from a hardware/materials order document, your task is to identify and extract the list of materials requested.
 CRITICAL RULES:
 1. ONLY extract items from tables that clearly represent materials/hardwares to be consumed (e.g., "Hardwares", "Materials List").
@@ -73,22 +73,21 @@ Output pure JSON. DO NOT include markdown formatting or markdown code blocks (no
 Document Text:
 ${rawText}`;
 
-        const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20240620',
-            max_tokens: 4096,
+        const response = await groq.chat.completions.create({
+            model: 'llama3-70b-8192',
             temperature: 0,
             messages: [{ role: 'user', content: prompt }]
         });
 
         let extractedItems: {raw_name: string, requested_qty: number}[] = [];
         try {
-            let jsonStr = (response.content[0] as any).text.trim();
+            let jsonStr = (response.choices[0]?.message?.content || '').trim();
             if (jsonStr.startsWith('\`\`\`json')) jsonStr = jsonStr.substring(7);
             if (jsonStr.startsWith('\`\`\`')) jsonStr = jsonStr.substring(3);
             if (jsonStr.endsWith('\`\`\`')) jsonStr = jsonStr.substring(0, jsonStr.length - 3);
             extractedItems = JSON.parse(jsonStr.trim());
         } catch (err) {
-            console.error('Failed to parse Claude JSON:', (response.content[0] as any).text);
+            console.error('Failed to parse Groq JSON:', response.choices[0]?.message?.content);
             throw new Error('Failed to parse AI extraction results. Please try again.');
         }
 
