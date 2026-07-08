@@ -64,6 +64,11 @@ export function runPipeline(
         proc.stderr.on('data', (data) => {
             stderr += data;
         });
+
+        proc.on('error', (err) => {
+            console.error('Failed to start Python process:', err);
+            reject(new Error(`Failed to start Python pipeline: ${err.message}. Ensure Python is installed and the venv exists.`));
+        });
         
         proc.on('close', (code) => {
             if (code !== 0) {
